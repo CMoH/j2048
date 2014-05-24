@@ -17,15 +17,15 @@ import org.openqa.selenium.Keys;
  */
 public class RandomAIDriver implements AIDriver {
 
-    public void start(int[] board) {
+    public void start(GameBoard board) throws AIException {
         // ignored
     }
 
-    public void end() {
+    public void end() throws AIException {
         // ignored
     }
 
-    public CharSequence nextMove() {
+    public CharSequence nextMove() throws AIException {
         double rnd = Math.random() * 4;
         if (rnd < 1.0) return Keys.LEFT;
         else if (rnd < 2.0) return Keys.RIGHT;
@@ -33,7 +33,7 @@ public class RandomAIDriver implements AIDriver {
         else return Keys.DOWN;
     }
 
-    public void processReply(CharSequence aiMove, int[] board) {
+    public void setBoardState(CharSequence aiMove, GameBoard board) throws AIException {
         // ignored
     }
     

@@ -1,11 +1,15 @@
 package com.cheepee.j2048;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
@@ -27,55 +31,67 @@ public class App {
         waitAndCloseNotice(driver);
         scrollToGame(driver);
 
-        int[] board = readBoard(driver);
+        GameBoard board = readBoard(driver);
 
-        AIDriver ai = new RandomAIDriver();
-        ai.start(board);
-
-        int moveCount = 0;
         try {
-            while (! gameLost(driver) && ! gameWon(driver)) {
-                CharSequence aiMove = ai.nextMove();
+//            AIDriver ai = new RandomAIDriver();
+            AIDriver ai = new HttpAIDriver(new URI("http://localhost:2048"));
+            ai.start(board);
 
-                Actions actions = new Actions(driver);
-                actions.sendKeys(aiMove);
-                actions.perform();
-                moveCount++;
+            int moveCount = 0;
+            try {
+                while (!gameLost(driver) && !gameWon(driver)) {
+                    CharSequence aiMove = ai.nextMove();
 
-                try {
-                    // TODO: fix condition 
-                    WebElement score = driver.findElement(By.cssSelector(".best-container"));
-                    Wait<WebDriver> wait = new FluentWait<WebDriver>(driver)
-                            .withTimeout(1, TimeUnit.SECONDS)
-                            .pollingEvery(200, TimeUnit.MILLISECONDS);
-                    wait.until(ExpectedConditions.stalenessOf(score));
-                } catch (TimeoutException ex) {
+                    Actions actions = new Actions(driver);
+                    actions.sendKeys(aiMove);
+                    actions.perform();
+                    moveCount++;
+
+                    try {
+                        // TODO: fix condition
+                        WebElement score = driver.findElement(By.cssSelector(".best-container"));
+                        Wait<WebDriver> wait = new FluentWait<WebDriver>(driver)
+                                .withTimeout(1, TimeUnit.SECONDS)
+                                .pollingEvery(200, TimeUnit.MILLISECONDS);
+                        wait.until(ExpectedConditions.stalenessOf(score));
+                    } catch (TimeoutException ex) {
+                    }
+
+                    board = readBoard(driver);
+                    board.print(System.out);
+                    ai.setBoardState(aiMove, board);
                 }
-
-                board = readBoard(driver);
-                printBoard(board);
-                ai.processReply(aiMove, board);
+            } finally {
+                ai.end();
             }
-            
-        } finally {
-            ai.end();
+
+            System.out.printf("\nDone in %d moves, and the outcome is... ", moveCount);
+
+            if (gameWon(driver)) {
+                System.out.println("Victory!!!");
+            } else if (gameLost(driver)) {
+                System.out.println("defeat :(");
+            } else {
+                System.out.println("I'm bored. Till next time...");
+            }
+
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (AIException ex) {
+            Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NumberFormatException ex) {
+            Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        System.out.printf("\nDone in %d moves, and the outcome is... ", moveCount);
-        
-        if (gameWon(driver)) 
-            System.out.println("Victory!!!");
-        else if (gameLost(driver)) 
-            System.out.println("defeat :(");
-        else 
-            System.out.println("I'm bored. Till next time...");
-
         driver.quit();
-}
+    }
 
-    private static int[] readBoard(WebDriver driver) throws NumberFormatException {
+    private static GameBoard readBoard(WebDriver driver) throws NumberFormatException {
         WebElement boardContainer = driver.findElement(By.cssSelector(".tile-container"));
-        int[] board = new int[16];
+        GameBoard board = new GameBoard();
         List<WebElement> tiles = boardContainer.findElements(By.cssSelector(".tile"));
         for (WebElement tile : tiles) {
             int x = -1;
@@ -98,7 +114,7 @@ public class App {
                 }
 
                 if (value > 0 && x >= 0 && y >= 0) {
-                    board[x + y * 4] = value;
+                    board.setTile(x, y, value);
                     break;
                 }
             }
@@ -127,16 +143,6 @@ public class App {
         js.executeScript("javascript:window.scrollBy(0,210)");
     }
 
-    private static void printBoard(int[] board) {
-        System.out.println();
-        for (int i = 0; i < board.length; ++i) {
-            System.out.printf("%5d", board[i]);
-            if ((i + 1) % 4 == 0) {
-                System.out.println();
-            }
-        }
-    }
-
     private static boolean gameLost(WebDriver driver) {
         try {
             driver.findElement(By.cssSelector(".game-over"));
@@ -145,7 +151,7 @@ public class App {
             return false;
         }
     }
-    
+
     private static boolean gameWon(WebDriver driver) {
         try {
             driver.findElement(By.cssSelector(".game-won"));
