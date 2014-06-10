@@ -52,7 +52,6 @@ public class GameBoard {
     }
 
     public void print(PrintStream writer) {
-        writer.println();
         for (int i = 0; i < board.size(); ++i) {
             writer.printf("%5d", board.get(i));
             if ((i + 1) % 4 == 0) {

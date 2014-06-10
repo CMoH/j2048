@@ -1,5 +1,6 @@
 package com.cheepee.j2048;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -10,6 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
@@ -45,6 +47,7 @@ public class App {
 
                     Actions actions = new Actions(driver);
                     actions.sendKeys(aiMove);
+                    printMove(aiMove);
                     actions.perform();
                     moveCount++;
 
@@ -56,6 +59,11 @@ public class App {
                                 .pollingEvery(200, TimeUnit.MILLISECONDS);
                         wait.until(ExpectedConditions.stalenessOf(score));
                     } catch (TimeoutException ex) {
+                    }
+
+                    if (System.in.available() > 0) {
+                        System.out.println("Aborting...");
+                        break;
                     }
 
                     board = readBoard(driver);
@@ -73,12 +81,12 @@ public class App {
             } else if (gameLost(driver)) {
                 System.out.println("defeat :(");
             } else {
-                System.out.println("I'm bored. Till next time...");
+                System.out.println("boredom. Till next time...");
             }
 
-        } catch (URISyntaxException ex) {
+        } catch (IOException ex) {
             Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (MalformedURLException ex) {
+        } catch (URISyntaxException ex) {
             Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
         } catch (AIException ex) {
             Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
@@ -140,7 +148,7 @@ public class App {
 
     private static void scrollToGame(WebDriver driver) {
         JavascriptExecutor js = (JavascriptExecutor) driver;
-        js.executeScript("javascript:window.scrollBy(0,210)");
+        js.executeScript("javascript:window.scrollBy(0,240)");
     }
 
     private static boolean gameLost(WebDriver driver) {
@@ -161,4 +169,18 @@ public class App {
         }
     }
 
+    private static void printMove(CharSequence aiMove) {
+        System.out.print("Move ");
+        if (aiMove == Keys.LEFT) {
+            System.out.println("left");
+        } else if (aiMove == Keys.RIGHT) {
+            System.out.println("right");
+        } else if (aiMove == Keys.UP) {
+            System.out.println("up");
+        } else if (aiMove == Keys.DOWN) {
+            System.out.println("down");
+        } else {
+            System.out.println("???");
+        }
+    }
 }
